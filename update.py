@@ -1,6 +1,7 @@
 import requests
 import os
 from datetime import datetime, timedelta
+
 TRAKT_CLIENT_ID = os.getenv("TRAKT_CLIENT_ID")
 TRAKT_CLIENT_SECRET = os.getenv("TRAKT_CLIENT_SECRET")
 TRAKT_REFRESH_TOKEN = os.getenv("TRAKT_REFRESH_TOKEN")
