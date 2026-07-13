@@ -112,4 +112,70 @@ upcoming_anime = fetch_anime(query_upcoming)
 print(f"Upcoming retornou {len(upcoming_anime)} animes")
 update_trakt_list("proximos-lancamentos", upcoming_anime)
 
+# ===============================
+# episodios-hoje
+# ===============================
+
+today_start = int(datetime.utcnow().replace(hour=0, minute=0, second=0).timestamp())
+today_end = int(datetime.utcnow().replace(hour=23, minute=59, second=59).timestamp())
+
+query_today = f"""
+query {{
+  Page(perPage: 50) {{
+    airingSchedules(
+      airingAt_greater: {today_start},
+      airingAt_lesser: {today_end}
+    ) {{
+      media {{
+        title {{
+          romaji
+        }}
+      }}
+    }}
+  }}
+}}
+"""
+
+response_today = requests.post(
+    "https://graphql.anilist.co",
+    json={"query": query_today}
+)
+
+today_data = response_today.json()["data"]["Page"]["airingSchedules"]
+
+today_anime = [item["media"] for item in today_data]
+
+print(f"Episódios hoje retornou {len(today_anime)} animes")
+
+update_trakt_list("episodios-hoje", today_anime)
+
+# ===============================
+# estreias-da-semana
+# ===============================
+
+week_start = int((datetime.utcnow() - timedelta(days=7)).timestamp())
+
+query_week = f"""
+query {{
+  Page(perPage: 50) {{
+    media(
+      type: ANIME,
+      status: RELEASING,
+      startDate_greater: {{ year: {datetime.utcnow().year} }}
+      sort: START_DATE_DESC
+    ) {{
+      title {{
+        romaji
+      }}
+    }}
+  }}
+}}
+"""
+
+week_anime = fetch_anime(query_week)
+
+print(f"Estreias semana retornou {len(week_anime)} animes")
+
+update_trakt_list("estreias-da-semana", week_anime)
+
 print("✅ Listas atualizadas!")
