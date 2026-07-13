@@ -64,6 +64,9 @@ def update_github_secret(secret_name, secret_value):
         }
     )
     
+# Primeiro renova token
+TRAKT_ACCESS_TOKEN = refresh_trakt_token()
+
 headers_trakt = {
     "Content-Type": "application/json",
     "trakt-api-version": "2",
