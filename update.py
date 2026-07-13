@@ -70,21 +70,22 @@ def update_trakt_list(list_slug, anime_list):
         if anime.get("title") and anime["title"].get("romaji"):
             name = anime["title"]["romaji"]
 
-search = requests.get(
-    "https://api.trakt.tv/search/show",
-    headers=headers_trakt,
-    params={"query": name}
-)
+            search = requests.get(
+                "https://api.trakt.tv/search/show",
+                headers=headers_trakt,
+                params={"query": name}
+            )
 
-if search.status_code == 401:
-    refresh_trakt_token()
-    search = requests.get(
-        "https://api.trakt.tv/search/show",
-        headers=headers_trakt,
-        params={"query": name}
-    )
+            # Se token expirou
+            if search.status_code == 401:
+                refresh_trakt_token()
+                search = requests.get(
+                    "https://api.trakt.tv/search/show",
+                    headers=headers_trakt,
+                    params={"query": name}
+                )
 
-results = search.json()
+            results = search.json()
 
             if results:
                 trakt_id = results[0]["show"]["ids"]["trakt"]
@@ -96,11 +97,19 @@ results = search.json()
     print(f"Enviando {len(shows)} animes para {list_slug}")
 
     if len(shows) > 0:
-        response = requests.post(url, headers=headers_trakt, json={"shows": shows})
+        response = requests.post(
+            url,
+            headers=headers_trakt,
+            json={"shows": shows}
+        )
 
-if response.status_code == 401:
-    refresh_trakt_token()
-    requests.post(url, headers=headers_trakt, json={"shows": shows})
+        if response.status_code == 401:
+            refresh_trakt_token()
+            requests.post(
+                url,
+                headers=headers_trakt,
+                json={"shows": shows}
+            )
 
 # ===============================
 # animes-da-temporada
