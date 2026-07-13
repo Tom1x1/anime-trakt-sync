@@ -64,6 +64,7 @@ query {{
 """
 
 season_anime = fetch_anime(query_season)
+print(f"Temporada retornou {len(season_anime)} animes")
 update_trakt_list("animes-da-temporada", season_anime)
 
 # ===============================
@@ -81,6 +82,7 @@ query {
 """
 
 upcoming_anime = fetch_anime(query_upcoming)
+print(f"Upcoming retornou {len(upcoming_anime)} animes")
 update_trakt_list("proximos-lancamentos", upcoming_anime)
 
 print("✅ Listas atualizadas!")
