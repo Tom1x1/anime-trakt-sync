@@ -2,38 +2,9 @@ import requests
 import os
 from datetime import datetime, timedelta
 
+TRAKT_ACCESS_TOKEN = os.getenv("TRAKT_ACCESS_TOKEN")
 TRAKT_CLIENT_ID = os.getenv("TRAKT_CLIENT_ID")
-TRAKT_CLIENT_SECRET = os.getenv("TRAKT_CLIENT_SECRET")
-TRAKT_REFRESH_TOKEN = os.getenv("TRAKT_REFRESH_TOKEN")
 TRAKT_USERNAME = os.getenv("TRAKT_USERNAME")
-
-def refresh_trakt_token():
-    print("🔄 Renovando access token...")
-
-    response = requests.post(
-        "https://api.trakt.tv/oauth/token",
-        headers={"Content-Type": "application/json"},
-        json={
-            "refresh_token": TRAKT_REFRESH_TOKEN,
-            "client_id": TRAKT_CLIENT_ID,
-            "client_secret": TRAKT_CLIENT_SECRET,
-            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
-            "grant_type": "refresh_token"
-        }
-    )
-
-    if response.status_code != 200:
-        print("❌ Erro ao renovar token:", response.text)
-        raise Exception("Falha ao renovar token")
-
-    data = response.json()
-
-    print("✅ Token renovado com sucesso!")
-
-    return data["access_token"]
-    
-# Primeiro renova token
-TRAKT_ACCESS_TOKEN = refresh_trakt_token()
 
 headers_trakt = {
     "Content-Type": "application/json",
