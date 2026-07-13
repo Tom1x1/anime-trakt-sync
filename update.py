@@ -153,35 +153,44 @@ update_trakt_list("episodios-hoje", today_anime)
 # estreias-da-semana
 # ===============================
 
-today = datetime.utcnow()
-week_ago = today - timedelta(days=7)
-
-query_week = f"""
+query_all_season = f"""
 query {{
   Page(perPage: 50) {{
     media(
-      type: ANIME,
-      startDate_greater: {{
-        year: {week_ago.year},
-        month: {week_ago.month},
-        day: {week_ago.day}
-      }},
-      startDate_lesser: {{
-        year: {today.year},
-        month: {today.month},
-        day: {today.day}
-      }},
-      sort: START_DATE_DESC
+      season: {season},
+      seasonYear: {year},
+      type: ANIME
     ) {{
       title {{
         romaji
+      }}
+      startDate {{
+        year
+        month
+        day
       }}
     }}
   }}
 }}
 """
 
-week_anime = fetch_anime(query_week)
+response_week = requests.post(
+    "https://graphql.anilist.co",
+    json={"query": query_all_season}
+)
+
+season_data = response_week.json()["data"]["Page"]["media"]
+
+week_anime = []
+
+seven_days_ago = datetime.utcnow() - timedelta(days=7)
+
+for anime in season_data:
+    sd = anime.get("startDate")
+    if sd and sd["year"] and sd["month"] and sd["day"]:
+        start_date = datetime(sd["year"], sd["month"], sd["day"])
+        if start_date >= seven_days_ago:
+            week_anime.append(anime)
 
 print(f"Estreias semana retornou {len(week_anime)} animes")
 
