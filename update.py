@@ -33,18 +33,32 @@ def fetch_anime(query):
 
 def update_trakt_list(list_slug, anime_list):
     url = f"https://api.trakt.tv/users/{TRAKT_USERNAME}/lists/{list_slug}/items"
-    
-    # Limpar lista antes
-    requests.delete(url, headers=headers_trakt)
-    
-    shows = []
-    for anime in anime_list:
-        if anime["idMal"]:
-            shows.append({
-                "ids": {"mal": anime["idMal"]}
-            })
 
-    requests.post(url, headers=headers_trakt, json={"shows": shows})
+    shows = []
+
+    for anime in anime_list:
+        if anime.get("title") and anime["title"].get("romaji"):
+            name = anime["title"]["romaji"]
+
+            search = requests.get(
+                "https://api.trakt.tv/search/show",
+                headers=headers_trakt,
+                params={"query": name}
+            )
+
+            results = search.json()
+
+            if results:
+                trakt_id = results[0]["show"]["ids"]["trakt"]
+
+                shows.append({
+                    "ids": {"trakt": trakt_id}
+                })
+
+    print(f"Enviando {len(shows)} animes para {list_slug}")
+
+    if len(shows) > 0:
+        requests.post(url, headers=headers_trakt, json={"shows": shows})
 
 # ===============================
 # animes-da-temporada
@@ -56,8 +70,15 @@ year = datetime.utcnow().year
 query_season = f"""
 query {{
   Page(perPage: 50) {{
-    media(season: {season}, seasonYear: {year}, type: ANIME) {{
-      idMal
+    media(
+      season: {season},
+      seasonYear: {year},
+      type: ANIME,
+      status: RELEASING
+    ) {{
+      title {{
+        romaji
+      }}
     }}
   }}
 }}
@@ -74,8 +95,14 @@ update_trakt_list("animes-da-temporada", season_anime)
 query_upcoming = """
 query {
   Page(perPage: 50) {
-    media(status: NOT_YET_RELEASED, type: ANIME, sort: START_DATE) {
-      idMal
+    media(
+      status: NOT_YET_RELEASED,
+      type: ANIME,
+      sort: START_DATE
+    ) {
+      title {
+        romaji
+      }
     }
   }
 }
