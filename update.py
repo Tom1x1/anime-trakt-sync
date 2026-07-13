@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 TRAKT_ACCESS_TOKEN = os.getenv("TRAKT_ACCESS_TOKEN")
 TRAKT_CLIENT_ID = os.getenv("TRAKT_CLIENT_ID")
 TRAKT_USERNAME = os.getenv("TRAKT_USERNAME")
+TRAKT_CLIENT_SECRET = os.getenv("TRAKT_CLIENT_SECRET")
+TRAKT_REFRESH_TOKEN = os.getenv("TRAKT_REFRESH_TOKEN")
 
 headers_trakt = {
     "Content-Type": "application/json",
@@ -11,6 +13,35 @@ headers_trakt = {
     "trakt-api-key": TRAKT_CLIENT_ID,
     "Authorization": f"Bearer {TRAKT_ACCESS_TOKEN}"
 }
+
+def refresh_trakt_token():
+    global TRAKT_ACCESS_TOKEN, headers_trakt
+
+    print("🔄 Token expirado. Renovando...")
+
+    response = requests.post(
+        "https://api.trakt.tv/oauth/token",
+        headers={"Content-Type": "application/json"},
+        json={
+            "refresh_token": TRAKT_REFRESH_TOKEN,
+            "client_id": TRAKT_CLIENT_ID,
+            "client_secret": TRAKT_CLIENT_SECRET,
+            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+            "grant_type": "refresh_token"
+        }
+    )
+
+    if response.status_code != 200:
+        print("❌ Erro ao renovar:", response.text)
+        raise Exception("Falha ao renovar token")
+
+    data = response.json()
+
+    TRAKT_ACCESS_TOKEN = data["access_token"]
+
+    headers_trakt["Authorization"] = f"Bearer {TRAKT_ACCESS_TOKEN}"
+
+    print("✅ Token renovado com sucesso!")
 
 def get_current_season():
     month = datetime.utcnow().month
@@ -39,13 +70,21 @@ def update_trakt_list(list_slug, anime_list):
         if anime.get("title") and anime["title"].get("romaji"):
             name = anime["title"]["romaji"]
 
-            search = requests.get(
-                "https://api.trakt.tv/search/show",
-                headers=headers_trakt,
-                params={"query": name}
-            )
+search = requests.get(
+    "https://api.trakt.tv/search/show",
+    headers=headers_trakt,
+    params={"query": name}
+)
 
-            results = search.json()
+if search.status_code == 401:
+    refresh_trakt_token()
+    search = requests.get(
+        "https://api.trakt.tv/search/show",
+        headers=headers_trakt,
+        params={"query": name}
+    )
+
+results = search.json()
 
             if results:
                 trakt_id = results[0]["show"]["ids"]["trakt"]
@@ -57,7 +96,11 @@ def update_trakt_list(list_slug, anime_list):
     print(f"Enviando {len(shows)} animes para {list_slug}")
 
     if len(shows) > 0:
-        requests.post(url, headers=headers_trakt, json={"shows": shows})
+        response = requests.post(url, headers=headers_trakt, json={"shows": shows})
+
+if response.status_code == 401:
+    refresh_trakt_token()
+    requests.post(url, headers=headers_trakt, json={"shows": shows})
 
 # ===============================
 # animes-da-temporada
