@@ -1,11 +1,69 @@
 import requests
 import os
 from datetime import datetime, timedelta
-
+TRAKT_CLIENT_SECRET = os.getenv("TRAKT_CLIENT_SECRET")
+TRAKT_REFRESH_TOKEN = os.getenv("TRAKT_REFRESH_TOKEN")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY")
 TRAKT_CLIENT_ID = os.getenv("TRAKT_CLIENT_ID")
 TRAKT_ACCESS_TOKEN = os.getenv("TRAKT_ACCESS_TOKEN")
 TRAKT_USERNAME = os.getenv("TRAKT_USERNAME")
 
+def refresh_trakt_token():
+    print("🔄 Renovando access token...")
+
+    response = requests.post(
+        "https://api.trakt.tv/oauth/token",
+        json={
+            "refresh_token": TRAKT_REFRESH_TOKEN,
+            "client_id": TRAKT_CLIENT_ID,
+            "client_secret": TRAKT_CLIENT_SECRET,
+            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+            "grant_type": "refresh_token"
+        }
+    )
+
+    data = response.json()
+
+    new_access_token = data["access_token"]
+    new_refresh_token = data["refresh_token"]
+
+    print("✅ Token renovado com sucesso!")
+
+    # Atualiza o secret TRAKT_ACCESS_TOKEN no GitHub
+    update_github_secret("TRAKT_ACCESS_TOKEN", new_access_token)
+    update_github_secret("TRAKT_REFRESH_TOKEN", new_refresh_token)
+
+    return new_access_token
+
+def update_github_secret(secret_name, secret_value):
+    import base64
+    from nacl import encoding, public
+
+    # Pega chave pública do repositório
+    url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/actions/secrets/public-key"
+    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+    public_key = response.json()["key"]
+    key_id = response.json()["key_id"]
+
+    # Criptografa o novo valor
+    public_key_obj = public.PublicKey(public_key.encode(), encoding.Base64Encoder())
+    sealed_box = public.SealedBox(public_key_obj)
+    encrypted = sealed_box.encrypt(secret_value.encode())
+    encrypted_value = base64.b64encode(encrypted).decode()
+
+    # Atualiza secret
+    url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/actions/secrets/{secret_name}"
+    requests.put(
+        url,
+        headers=headers,
+        json={
+            "encrypted_value": encrypted_value,
+            "key_id": key_id
+        }
+    )
+    
 headers_trakt = {
     "Content-Type": "application/json",
     "trakt-api-version": "2",
