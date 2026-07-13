@@ -47,7 +47,7 @@ def update_trakt_list(list_slug, anime_list):
     requests.post(url, headers=headers_trakt, json={"shows": shows})
 
 # ===============================
-# 🌸 ANIMES DA TEMPORADA
+# animes-da-temporada
 # ===============================
 
 season = get_current_season()
@@ -67,7 +67,7 @@ season_anime = fetch_anime(query_season)
 update_trakt_list("animes-da-temporada", season_anime)
 
 # ===============================
-# ⏳ PRÓXIMOS LANÇAMENTOS
+# proximos-lancamentos
 # ===============================
 
 query_upcoming = """
