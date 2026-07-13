@@ -153,15 +153,24 @@ update_trakt_list("episodios-hoje", today_anime)
 # estreias-da-semana
 # ===============================
 
-week_start = int((datetime.utcnow() - timedelta(days=7)).timestamp())
+today = datetime.utcnow()
+week_ago = today - timedelta(days=7)
 
 query_week = f"""
 query {{
   Page(perPage: 50) {{
     media(
       type: ANIME,
-      status: RELEASING,
-      startDate_greater: {{ year: {datetime.utcnow().year} }}
+      startDate_greater: {{
+        year: {week_ago.year},
+        month: {week_ago.month},
+        day: {week_ago.day}
+      }},
+      startDate_lesser: {{
+        year: {today.year},
+        month: {today.month},
+        day: {today.day}
+      }},
       sort: START_DATE_DESC
     ) {{
       title {{
