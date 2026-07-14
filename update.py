@@ -97,7 +97,7 @@ def update_trakt_list(list_slug, anime_list):
     print(f"Enviando {len(shows)} animes para {list_slug}")
 
     if len(shows) > 0:
-        response = requests.post(
+        response = requests.put(
             url,
             headers=headers_trakt,
             json={"shows": shows}
