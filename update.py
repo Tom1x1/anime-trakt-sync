@@ -62,10 +62,13 @@ def fetch_anime(query):
     return response.json()["data"]["Page"]["media"]
 
 def update_trakt_list(list_slug, anime_list):
-    url = f"https://api.trakt.tv/users/{TRAKT_USERNAME}/lists/{list_slug}/items"
+    base_url = f"https://api.trakt.tv/users/{TRAKT_USERNAME}/lists/{list_slug}/items"
 
     shows = []
 
+    # =============================
+    # 1️⃣ Converter animes para IDs do Trakt
+    # =============================
     for anime in anime_list:
         if anime.get("title") and anime["title"].get("romaji"):
             name = anime["title"]["romaji"]
@@ -75,6 +78,65 @@ def update_trakt_list(list_slug, anime_list):
                 headers=headers_trakt,
                 params={"query": name}
             )
+
+            if search.status_code == 401:
+                refresh_trakt_token()
+                search = requests.get(
+                    "https://api.trakt.tv/search/show",
+                    headers=headers_trakt,
+                    params={"query": name}
+                )
+
+            results = search.json()
+
+            if results:
+                trakt_id = results[0]["show"]["ids"]["trakt"]
+                shows.append({"ids": {"trakt": trakt_id}})
+
+    print(f"🔄 Atualizando lista {list_slug} com {len(shows)} itens")
+
+    # =============================
+    # 2️⃣ Buscar itens atuais da lista
+    # =============================
+    current_items = requests.get(base_url, headers=headers_trakt)
+
+    if current_items.status_code == 401:
+        refresh_trakt_token()
+        current_items = requests.get(base_url, headers=headers_trakt)
+
+    current_data = current_items.json()
+
+    # =============================
+    # 3️⃣ Remover todos os itens atuais
+    # =============================
+    if current_data:
+        items_to_remove = {
+            "shows": [
+                {"ids": {"trakt": item["show"]["ids"]["trakt"]}}
+                for item in current_data
+                if item.get("show")
+            ]
+        }
+
+        print(f"🗑 Removendo {len(items_to_remove['shows'])} itens antigos")
+
+        requests.post(
+            base_url + "/remove",
+            headers=headers_trakt,
+            json=items_to_remove
+        )
+
+    # =============================
+    # 4️⃣ Adicionar novos itens
+    # =============================
+    if shows:
+        requests.post(
+            base_url,
+            headers=headers_trakt,
+            json={"shows": shows}
+        )
+
+    print(f"✅ Lista {list_slug} atualizada com sucesso!\n")
 
             # Se token expirou
             if search.status_code == 401:
