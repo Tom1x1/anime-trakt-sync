@@ -188,8 +188,10 @@ update_trakt_list("proximos-lancamentos", upcoming_anime)
 # episodios-hoje
 # ===============================
 
-today_start = int(datetime.utcnow().replace(hour=0, minute=0, second=0).timestamp())
-today_end = int(datetime.utcnow().replace(hour=23, minute=59, second=59).timestamp())
+# ✅ Usa horário LOCAL (não UTC)
+now = datetime.now()
+today_start = int(now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+today_end = int(now.replace(hour=23, minute=59, second=59, microsecond=0).timestamp())
 
 query_today = f"""
 query {{
@@ -199,6 +201,7 @@ query {{
       airingAt_lesser: {today_end}
     ) {{
       media {{
+        status
         title {{
           romaji
         }}
@@ -214,9 +217,16 @@ response_today = requests.post(
 )
 
 today_data = response_today.json()["data"]["Page"]["airingSchedules"]
-today_anime = [item["media"] for item in today_data]
+
+# ✅ Filtra apenas animes que ainda estão lançando
+today_anime = [
+    item["media"]
+    for item in today_data
+    if item["media"]["status"] == "RELEASING"
+]
 
 print(f"Episódios hoje retornou {len(today_anime)} animes")
+
 update_trakt_list("episodios-hoje", today_anime)
 
 print("✅ Listas atualizadas!")
