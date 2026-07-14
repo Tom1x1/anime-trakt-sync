@@ -1,6 +1,7 @@
 import requests
 import os
 from datetime import datetime, timedelta
+
 TRAKT_ACCESS_TOKEN = os.getenv("TRAKT_ACCESS_TOKEN")
 TRAKT_CLIENT_ID = os.getenv("TRAKT_CLIENT_ID")
 TRAKT_USERNAME = os.getenv("TRAKT_USERNAME")
@@ -36,9 +37,7 @@ def refresh_trakt_token():
         raise Exception("Falha ao renovar token")
 
     data = response.json()
-
     TRAKT_ACCESS_TOKEN = data["access_token"]
-
     headers_trakt["Authorization"] = f"Bearer {TRAKT_ACCESS_TOKEN}"
 
     print("✅ Token renovado com sucesso!")
@@ -66,9 +65,7 @@ def update_trakt_list(list_slug, anime_list):
 
     shows = []
 
-    # =============================
     # 1️⃣ Converter animes para IDs do Trakt
-    # =============================
     for anime in anime_list:
         if anime.get("title") and anime["title"].get("romaji"):
             name = anime["title"]["romaji"]
@@ -95,9 +92,7 @@ def update_trakt_list(list_slug, anime_list):
 
     print(f"🔄 Atualizando lista {list_slug} com {len(shows)} itens")
 
-    # =============================
     # 2️⃣ Buscar itens atuais da lista
-    # =============================
     current_items = requests.get(base_url, headers=headers_trakt)
 
     if current_items.status_code == 401:
@@ -106,9 +101,7 @@ def update_trakt_list(list_slug, anime_list):
 
     current_data = current_items.json()
 
-    # =============================
     # 3️⃣ Remover todos os itens atuais
-    # =============================
     if current_data:
         items_to_remove = {
             "shows": [
@@ -126,9 +119,7 @@ def update_trakt_list(list_slug, anime_list):
             json=items_to_remove
         )
 
-    # =============================
     # 4️⃣ Adicionar novos itens
-    # =============================
     if shows:
         requests.post(
             base_url,
@@ -138,40 +129,6 @@ def update_trakt_list(list_slug, anime_list):
 
     print(f"✅ Lista {list_slug} atualizada com sucesso!\n")
 
-            # Se token expirou
-            if search.status_code == 401:
-                refresh_trakt_token()
-                search = requests.get(
-                    "https://api.trakt.tv/search/show",
-                    headers=headers_trakt,
-                    params={"query": name}
-                )
-
-            results = search.json()
-
-            if results:
-                trakt_id = results[0]["show"]["ids"]["trakt"]
-
-                shows.append({
-                    "ids": {"trakt": trakt_id}
-                })
-
-    print(f"Enviando {len(shows)} animes para {list_slug}")
-
-    if len(shows) > 0:
-        response = requests.put(
-            url,
-            headers=headers_trakt,
-            json={"shows": shows}
-        )
-
-        if response.status_code == 401:
-            refresh_trakt_token()
-            requests.post(
-                url,
-                headers=headers_trakt,
-                json={"shows": shows}
-            )
 
 # ===============================
 # animes-da-temporada
@@ -201,6 +158,7 @@ season_anime = fetch_anime(query_season)
 print(f"Temporada retornou {len(season_anime)} animes")
 update_trakt_list("animes-da-temporada", season_anime)
 
+
 # ===============================
 # proximos-lancamentos
 # ===============================
@@ -224,6 +182,7 @@ query {
 upcoming_anime = fetch_anime(query_upcoming)
 print(f"Upcoming retornou {len(upcoming_anime)} animes")
 update_trakt_list("proximos-lancamentos", upcoming_anime)
+
 
 # ===============================
 # episodios-hoje
@@ -255,11 +214,9 @@ response_today = requests.post(
 )
 
 today_data = response_today.json()["data"]["Page"]["airingSchedules"]
-
 today_anime = [item["media"] for item in today_data]
 
 print(f"Episódios hoje retornou {len(today_anime)} animes")
-
 update_trakt_list("episodios-hoje", today_anime)
 
 print("✅ Listas atualizadas!")
